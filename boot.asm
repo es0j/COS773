@@ -1,6 +1,53 @@
 [BITS 16]
 [ORG 7c00h]
+
+jmp boot
+
+;dh = number of sectors
+disk_load:
+    mov ah, 0x02 ; read mode
+    mov al, dh   ; read dh number of sectors
+    mov cl, 0x02 ; start from sector 2
+                 ; (as sector 1 is our boot sector)
+    mov ch, 0x00 ; cylinder 0
+    mov dh, 0x00 ; head 0
+
+    ; dl = drive number is set as input to disk_load
+    ; es:bx = buffer pointer is set as input as well
+
+    int 0x13      ; BIOS interrupt
+    ret;
+
+disk_error:
+    jmp disk_loop
+
+sectors_error:
+    jmp disk_loop
+
+disk_loop:
+    jmp $
+
 boot:
+    mov [BOOT_DRIVE], dl
+
+    xor ax, ax
+    mov ds,ax
+    mov es,ax
+    mov ss,ax       
+    mov sp, 0x7C00 
+    mov bp,sp
+
+    mov ax,0xaabb
+    push ax
+
+    mov bx,0x8000 ;load kernel on address 0:7e000 (free)
+
+    mov dh, 20             ; dh -> num sectors
+    mov dl, [BOOT_DRIVE]  ; dl -> disk
+
+    call disk_load
+
+go_protected:
 
     cli
     lgdt [gdtPtr]
@@ -84,6 +131,11 @@ finished:
     
     mov rsi, helostr
     call print_string
+
+
+    mov rax,[0x8018]
+    jmp rax
+
     jmp $
 
 
@@ -102,6 +154,7 @@ print_string:
     jnz print_string
     ret
 
+BOOT_DRIVE db 0
 
 helostr: db "#Hello world from long and paged mode",0x10,0x00 ; Dont know how to print new line
 
