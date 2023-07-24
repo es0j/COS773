@@ -156,7 +156,7 @@ print_string:
 
 BOOT_DRIVE db 0
 
-helostr: db "#Hello world from long and paged mode",0x10,0x00 ; Dont know how to print new line
+helostr: db 0xa,0xd,"#Hello world from long and paged mode",0xa,0xd,0x00
 
 times 510-($-$$) db 0x90
 

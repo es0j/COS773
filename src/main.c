@@ -1,6 +1,6 @@
 #include <stdint.h>
 
-char *helloStr="\r\nHello world from C!\r\n\0";
+char *helloStr="#Hello world from C!\r\n\0";
 #define IDT_ENTRIES 256
 
 
@@ -22,8 +22,8 @@ int earlyPutch(char inputchar){
 }
 
 int earlyPrintf(char *s){
-    while(*s++!='\0'){
-        earlyPutch(*s);
+    while(*s!='\0'){
+        earlyPutch(*s++);
     }
 }
 
@@ -60,7 +60,7 @@ struct idtdesc64 kidt[IDT_ENTRIES];
 //default
 void interrupt_handler(){
 
-  earlyPrintf("Aaaaaaaaa\n");
+  earlyPrintf("default interruption\n");
     outb(0x20,0x20);
   //outb(0xA0,0x20);
 }
