@@ -1,21 +1,12 @@
+#include <stdint.h>
 
 char *helloStr="\r\nHello world from C!\r\n\0";
+#define IDT_ENTRIES 256
 
 
-
-
-
-
-
-#define INT_DISABLE 0
-#define INT_ENABLE  0x200
-#define PIC1 0x20
-#define PIC2 0xA0
-
-#define ICW1 0x11
-#define ICW4 0x01
-
-
+extern void isr_wrapper();
+extern void isr_wrapper_keyboard();
+extern void kernel_main();
 
 
 int earlyPutch(char inputchar){
@@ -36,146 +27,94 @@ int earlyPrintf(char *s){
     }
 }
 
-void outb( unsigned short port, unsigned char val )
+struct idtdesc64 {
+   uint16_t offset_1;        // offset bits 0..15
+   uint16_t selector;        // a code segment selector in GDT or LDT
+   uint8_t  ist;             // bits 0..2 holds Interrupt Stack Table offset, rest of bits zero.
+   uint8_t  type_attributes; // gate type, dpl, and p fields
+   uint16_t offset_2;        // offset bits 16..31
+   uint32_t offset_3;        // offset bits 32..63
+   uint32_t zero;            // reserved
+}__attribute__ ((packed));
+
+struct idtr64 {
+    uint16_t limite;
+    uint64_t base;
+} __attribute__ ((packed));
+
+void init_idt_desc(uint16_t select, uint64_t offset, uint8_t type,uint8_t ist, struct idtdesc64 *desc)
 {
-   asm volatile("out  %1, %0" : : "a"(val), "Nd"(port) );
+    desc->offset_1 = offset&0xffff;
+    desc->selector = select;
+    desc->ist = ist;
+    desc->type_attributes = type;
+    desc->offset_2 = offset&0xffff0000;
+    desc->offset_3 = offset&0xffffffff00000000;
+    desc->zero = 0;
+    return;
 }
 
-unsigned char inb (unsigned short int port)
-{
-  unsigned char _v;
+struct idtr64 kidtr;
+struct idtdesc64 kidt[IDT_ENTRIES];
 
-  __asm__ __volatile__ ("in %0, %w1":"=a" (_v):"Nd" (port));
-  return _v;
+//default
+void interrupt_handler(){
+
+  earlyPrintf("Aaaaaaaaa\n");
+    outb(0x20,0x20);
+  //outb(0xA0,0x20);
 }
 
-void init_pics(int pic1, int pic2)
-{
-   /* send ICW1 */
-   outb(PIC1, ICW1);
-   outb(PIC2, ICW1);
-
-   /* send ICW2 */
-   outb(PIC1 + 1, pic1);   
-   outb(PIC2 + 1, pic2);   
-
-   /* send ICW3 */
-   outb(PIC1 + 1, 4);   
-   outb(PIC2 + 1, 2);
-
-   /* send ICW4 */
-   outb(PIC1 + 1, ICW4);
-   outb(PIC2 + 1, ICW4);
-
-   /* disable all IRQs */
-   outb(PIC1 + 1, 0xFF);
-}
-
-int capslock = 0;
-
-char kbd_US [128] =
-{
-  0,  27, '1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '-', '=', -1,   
-  '\t', /* <-- Tab */
-  'q', 'w', 'e', 'r', 't', 'y', 'u', 'i', 'o', 'p', '[', ']', '\n',
-  0, /* <-- control key */
-  'a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l', ';', '\'', '`',  0, '\\', 'z', 'x', 'c', 'v', 'b', 'n', 'm', ',', '.', '/', -4,
-  '*',
-  0,  /* Alt */
-  ' ',  /* Space bar */
-  -3,  /* Caps lock */
-  0,  /* 59 - F1 key ... > */
-  0,   0,   0,   0,   0,   0,   0,   0,
-  0,  /* < ... F10 */
-  0,  /* 69 - Num lock*/
-  0,  /* Scroll Lock */
-  0,  /* Home key */
-  0,  /* Up Arrow */
-  0,  /* Page Up */
-  '-',
-  0,  /* Left Arrow */
-  0,
-  0,  /* Right Arrow */
-  '+',
-  -2,  /* 79 - End key*/
-  0,  /* Down Arrow */
-  0,  /* Page Down */
-  0,  /* Insert Key */
-  0,  /* Delete Key */
-  0,   0,   0,
-  0,  /* F11 Key */
-  0,  /* F12 Key */
-  0,  /* All other keys are undefined */
-};
-
-char capital_kbd_US [128] =
-{
-  0,  27, '!', '@', '#', '$', '%', '^', '&', '*', '(', ')', '_', '+', -5,   
-  '\t', /* <-- Tab */
-  'Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P', '{', '}', '\n',
-  0, /* <-- control key */
-  'A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L', ':', '"', '~',  0, '|', 'Z', 'X', 'C', 'V', 'B', 'N', 'M', '<', '>', '?', -8,
-  '*',
-  0,  /* Alt */
-  ' ',  /* Space bar */
-  -7,  /* Caps lock */
-  0,  /* 59 - F1 key ... > */
-  0,   0,   0,   0,   0,   0,   0,   0,
-  0,  /* < ... F10 */
-  0,  /* 69 - Num lock*/
-  0,  /* Scroll Lock */
-  0,  /* Home key */
-  0,  /* Up Arrow */
-  0,  /* Page Up */
-  '-',
-  0,  /* Left Arrow */
-  0,
-  0,  /* Right Arrow */
-  '+',
-  -6,  /* 79 - End key*/
-  0,  /* Down Arrow */
-  0,  /* Page Down */
-  0,  /* Insert Key */
-  0,  /* Delete Key */
-  0,   0,   0,
-  0,  /* F11 Key */
-  0,  /* F12 Key */
-  0,  /* All other keys are undefined */
-};
-
-void kernel_main() {
-  unsigned char c = 0;
-  unsigned short port = 0x60;
-  int shift = 0;
-  int length = 0;
-  char* haha = "";
-  //init_pics();
-  //asm("sti");
-  outb(0x61, 0x7F);//Enables the keyboard  
-  earlyPrintf("\r\n!");
-  do
-  {
-    c = inb(port);
-    if (inb(port) != c) //PORT FROM WHICH WE READ
-    {
-
-      earlyPutch(kbd_US[c]);
-      earlyPutch('!');
-    }
-  }while(kbd_US[c] != -2); // 1= ESCAPE
-}
-
-
-
-int readKeyboard(){
+void keyboardInt(){
+  int data;
+  data=inb(0x60);
+  earlyPrintf("keyboard pressed\n");
+  
+  outb(0x20,0x20);
+  //outb(0xA0,0x20);
 
 }
 
+void init_idt()
+{
+    /* Init irq */
+    for (int i = 0; i < IDT_ENTRIES; i++)
+      //64-bit Interrupt Gate: 0x8E (p=1, dpl=0b00, type=0b1110 => type_attributes=0b1000_1110=0x8E)
+      init_idt_desc(0x18, (uint64_t)isr_wrapper, 0x8E,0, &kidt[i]); //
+
+    //for (int i = 10; i < 14; i++)
+    init_idt_desc(0x18, (uint64_t)isr_wrapper_keyboard, 0x8E,0, &kidt[1]); //keyboard
+
+    kidtr.limite = IDT_ENTRIES * 16;
+    kidtr.base = (uint64_t)&kidt;
+
+    /* Load the IDTR registry */
+    asm(
+        "lidt (kidtr) \n"
+        "sti          \n"
+        );
+
+}
 
 int main(){
     asm("mov rsp,0x1000000\n");
     asm("mov rbp,rsp       \n");
+    init_idt();
     earlyPrintf(helloStr);
+
+    //outb(0x21,0xfd);
+    //outb(0xa1,0xff);
+    //asm("sti");
+    //outb(0x64, 0xF4);
+    //outb(0x60, 0xF4);
+
+    /*while (1)
+    {
+      //asm("INT 50");
+      /* code */
+      //asm("sti");
+    //}
+    
     kernel_main();
 }
 
