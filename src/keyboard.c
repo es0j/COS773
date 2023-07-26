@@ -31,13 +31,13 @@ void kernel_main() {
 
   pic_mask();
 
-  int data = inb(0x61);     
-  outb(0x61, data & 0x7F);//Enables the keyboard  ?
-  earlyPrintf("Is keyboard working?!\n\r");
+  //int data = inb(0x61);     
+  //outb(0x61, data & 0x7F);//Enables the keyboard  ?
+  earlyPrintf("Is keyboard working?!\r\n");
   do
   {
     //c = 1/c;
-    //asm("int 0");
+    asm("hlt");
     
     
   }while(1); // 1= ESCAPE

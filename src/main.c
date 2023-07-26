@@ -1,6 +1,6 @@
 #include <stdint.h>
 
-char *helloStr="#Hello world from C!\r\n\0";
+char *helloStr="#Hello world from C!\r\n";
 #define IDT_ENTRIES 256
 
 
@@ -60,16 +60,17 @@ struct idtdesc64 kidt[IDT_ENTRIES];
 //default
 void interrupt_handler(){
 
-  earlyPrintf("default interruption\n");
+  earlyPrintf("default interruption\r\n");
     outb(0x20,0x20);
   //outb(0xA0,0x20);
 }
 
 void keyboardInt(){
-  int data;
+  char data;
   data=inb(0x60);
-  earlyPrintf("keyboard pressed\n");
-  
+  earlyPrintf("keyboard pressed: ");
+  earlyPutch('A'+data);
+  earlyPrintf("\r\n");
   outb(0x20,0x20);
   //outb(0xA0,0x20);
 
@@ -83,7 +84,7 @@ void init_idt()
       init_idt_desc(0x18, (uint64_t)isr_wrapper, 0x8E,0, &kidt[i]); //
 
     //for (int i = 10; i < 14; i++)
-    init_idt_desc(0x18, (uint64_t)isr_wrapper_keyboard, 0x8E,0, &kidt[1]); //keyboard
+    init_idt_desc(0x18, (uint64_t)isr_wrapper_keyboard, 0x8E,0, &kidt[9]); //keyboard
 
     kidtr.limite = IDT_ENTRIES * 16;
     kidtr.base = (uint64_t)&kidt;
@@ -91,7 +92,6 @@ void init_idt()
     /* Load the IDTR registry */
     asm(
         "lidt (kidtr) \n"
-        "sti          \n"
         );
 
 }
@@ -100,6 +100,8 @@ int main(){
     asm("mov rsp,0x1000000\n");
     asm("mov rbp,rsp       \n");
     init_idt();
+    //clear screen magic
+    earlyPrintf("\x1b[2J\x1B[H\n\r");
     earlyPrintf(helloStr);
 
     //outb(0x21,0xfd);

@@ -10,7 +10,7 @@ all:
 
 	cat build/boot build/main > build/bootstrap
 	sleep 1
-	qemu-system-x86_64 -drive format=raw,index=0,if=floppy,file=build/bootstrap -nographic -monitor /dev/null    
+	qemu-system-x86_64 -drive format=raw,index=0,if=floppy,file=build/bootstrap -nographic -monitor /dev/null    -display curses
 	
 	#qemu-system-i386 -drive format=raw,index=0,if=floppy,file=build/bootstrap -nographic -monitor /dev/null -s -S
 clean:
