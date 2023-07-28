@@ -2,10 +2,9 @@
 [BITS 64]
 global   isr_wrapper
 global   isr_wrapper_keyboard
-align   4
 
 extern interrupt_handler
-extern keyboardInt
+extern keyboardISR
 
 
 %macro SAVE_REGS 0
@@ -29,19 +28,17 @@ extern keyboardInt
 %endmacro
 
 
-
 isr_wrapper:
     SAVE_REGS
-    cld    ; C code following the sysV ABI requires DF to be clear on function entry
+    cld   
     call interrupt_handler
-    ;pop rax
     RESTORE_REGS
     iretq
 
 isr_wrapper_keyboard:
     SAVE_REGS
-    cld    ; C code following the sysV ABI requires DF to be clear on function entry
-    call keyboardInt
-    ;pop rax
+    cld    
+    call keyboardISR
+
     RESTORE_REGS
     iretq

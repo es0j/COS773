@@ -132,8 +132,10 @@ finished:
     mov rsi, helostr
     call print_string
 
+    mov rsp,0x1000000       ;set new stack
+    mov rbp,rsp
 
-    mov rax,[0x8018]
+    mov rax,[0x8018] ;read elf
     jmp rax
 
     jmp $
